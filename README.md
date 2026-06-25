@@ -1,5 +1,7 @@
 # mini-inference-platform
 
+[![CI](https://github.com/Tejaacavale/mini-inference-platform/actions/workflows/ci.yaml/badge.svg)](https://github.com/Tejaacavale/mini-inference-platform/actions/workflows/ci.yaml)
+
 A sentiment-classification model (`distilbert-base-uncased-finetuned-sst-2-english`)
 served behind an **async FastAPI** API with **dynamic request batching**,
 containerized with a **multi-stage Docker** build, deployed to a local **kind**
