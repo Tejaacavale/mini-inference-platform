@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+  labels:
+    app: inference
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: inference
+  template:
+    metadata:
+      labels:
+        app: inference
+      annotations:
+        # Tell Prometheus to scrape these pods.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: inference
+          image: mini-inference-platform:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            # Keep torch's thread pools within the pod's 1-CPU limit so replicas
+            # don't oversubscribe the node and get CFS-throttled into timeouts.
+            - name: TORCH_NUM_THREADS
+              value: "1"
+            - name: OMP_NUM_THREADS
+              value: "1"
+            - name: MKL_NUM_THREADS
+              value: "1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          # Startup probe gates liveness AND readiness until the app has
+          # actually started. The model load (tens of seconds, and much longer
+          # when the node is under CPU pressure during a scale-out) used to
+          # exceed the liveness budget and get new pods killed mid-load —
+          # a restart loop that prevented the HPA from ever growing the fleet.
+          # Allowing up to 30 × 5s = 150s here decouples slow startup from the
+          # fast steady-state liveness check below.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 3

@@ -1,0 +1,11 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: inference
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Map a host port to a NodePort so we can reach the cluster without
+      # a separate port-forward if desired.
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP

@@ -1,0 +1,38 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inference
+  labels:
+    app: inference
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inference
+  minReplicas: 3
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # % of the pod's CPU *request* (250m). A busy inference pod uses ~1
+          # full CPU, i.e. far above 250m, so real load pushes utilization well
+          # past this target and the HPA scales out — exactly the intent.
+          averageUtilization: 60
+  behavior:
+    # Tightened from the defaults so the demo reacts quickly. Production would
+    # usually keep a longer scale-down window to avoid flapping.
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 30
